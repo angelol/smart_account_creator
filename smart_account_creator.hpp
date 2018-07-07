@@ -5,7 +5,7 @@
 #include <eosiolib/currency.hpp>
 #include "includes/exchange_state.hpp"
 #include <eosiolib/public_key.hpp>
-#include "abieos-numeric-c-14/abieos_numeric.hpp"
+#include "includes/abieos_numeric.hpp"
 #include "includes/exchange_state.cpp"
 #include "includes/eosio.token.hpp"
 
