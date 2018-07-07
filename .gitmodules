@@ -1,0 +1,3 @@
+[submodule "abieos-numeric-c-14"]
+	path = abieos-numeric-c-14
+	url = https://github.com/angelol/abieos-numeric-c-14.git
