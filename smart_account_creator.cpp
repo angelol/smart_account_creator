@@ -13,7 +13,11 @@ public:
       // this is an outgoing transfer, do nothing
       return;
     }
-
+    
+    /* Parse Memo
+     * Memo must have format "account_name:owner_key:active_key"
+     *
+     */
     eosio_assert(transfer.quantity.symbol == string_to_symbol(4, "EOS"),
                  "Must be EOS");
     eosio_assert(transfer.quantity.is_valid(), "Invalid token transfer");
