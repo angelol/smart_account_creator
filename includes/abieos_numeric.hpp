@@ -25,43 +25,6 @@ auto get_base58_map() {
 }
 
 template <size_t size>
-std::array<uint8_t, size> decimal_to_binary(std::string_view s) {
-    std::array<uint8_t, size> result{{0}};
-    for (auto& src_digit : s) {
-        if (src_digit < '0' || src_digit > '9')
-            eosio_assert(0, "invalid number");
-        uint8_t carry = src_digit - '0';
-        for (auto& result_byte : result) {
-            int x = result_byte * 10 + carry;
-            result_byte = x;
-            carry = x >> 8;
-        }
-        if (carry)
-            eosio_assert(0, "number is out of range");
-    }
-    return result;
-}
-
-template <size_t size>
-std::string binary_to_decimal(const std::array<uint8_t, size>& bin) {
-    std::string result("0");
-    for (auto byte_it = bin.rbegin(); byte_it != bin.rend(); ++byte_it) {
-        int carry = *byte_it;
-        for (auto& result_digit : result) {
-            int x = ((result_digit - '0') << 8) + carry;
-            result_digit = '0' + x % 10;
-            carry = x / 10;
-        }
-        while (carry) {
-            result.push_back('0' + carry % 10);
-            carry = carry / 10;
-        }
-    }
-    std::reverse(result.begin(), result.end());
-    return result;
-}
-
-template <size_t size>
 std::array<uint8_t, size> base58_to_binary(std::string_view s) {
     std::array<uint8_t, size> result{{0}};
     for (auto& src_digit : s) {
@@ -76,30 +39,6 @@ std::array<uint8_t, size> base58_to_binary(std::string_view s) {
         if (carry)
             eosio_assert(0, "base-58 value is out of range");
     }
-    std::reverse(result.begin(), result.end());
-    return result;
-}
-
-template <size_t size>
-std::string binary_to_base58(const std::array<uint8_t, size>& bin) {
-    std::string result("");
-    for (auto byte : bin) {
-        int carry = byte;
-        for (auto& result_digit : result) {
-            int x = (get_base58_map()[result_digit] << 8) + carry;
-            result_digit = base58_chars[x % 58];
-            carry = x / 58;
-        }
-        while (carry) {
-            result.push_back(base58_chars[carry % 58]);
-            carry = carry / 58;
-        }
-    }
-    for (auto byte : bin)
-        if (byte)
-            break;
-        else
-            result.push_back('1');
     std::reverse(result.begin(), result.end());
     return result;
 }
