@@ -35,3 +35,6 @@ Should any of the above actions fail, the transaction will be rolled back which
 means the money will automatically be refunded to you.
 
 If you want to use this code or need help modifying it to your needs, please contact me at: hello@eos-account-creator.com
+
+## Peer reviews
+If you want to review the code, that would be great. It's important for the community to have peer-reviewed, trusted, account creation smart contract code. Quick note to anyone wanting to verify the deployment (as there is no such things as etherscan yet, where you can upload the code): The code currently deployed on ```accountcreat``` is compiled with ```-Oz``` to save RAM.
