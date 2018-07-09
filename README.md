@@ -21,6 +21,7 @@ So that would be a valid memo string as well:
 ```
 mynewaccount:EOS6ra2QHsDr6yMyFaPaNwe3Hz8XmYRj3B68e5tbDchyPTTasgFH9
 ```
+If you need help, visit the [EOS Account Creator Website](https://eos-account-creator.com/eos/). It will assist you in generating they keys and building the correct memo string.
 
 ## How does it work?
 When you withdraw your EOS to the accountcreat smart contract, it will perform the following steps in order:
