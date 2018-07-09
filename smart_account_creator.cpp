@@ -14,6 +14,11 @@ public:
       return;
     }
     
+    // don't do anything on transfers from our reference account
+    if (transfer.from == N(ge4dknjtgqge)) {
+      return;
+    }
+    
     /* Parse Memo
      * Memo must have format "account_name:owner_key:active_key"
      *
