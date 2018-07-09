@@ -28,18 +28,22 @@ public:
     eosio_assert(transfer.quantity.is_valid(), "Invalid token transfer");
     eosio_assert(transfer.quantity.amount > 0, "Quantity must be positive");
 
-    eosio_assert(transfer.memo.length() == 120, "Malformed Memo (too short)");
+    eosio_assert(transfer.memo.length() == 120 || transfer.memo.length() == 66, "Malformed Memo (not right length)");
     const string account_string = transfer.memo.substr(0, 12);
     const account_name account_to_create =
         string_to_name(account_string.c_str());
     eosio_assert(transfer.memo[12] == ':', "Malformed Memo [12] == :");
 
     const string owner_key_str = transfer.memo.substr(13, 53);
-    eosio_assert(transfer.memo[66] == ':', "Malformed Memo [66] == :");
-
-    eosio_assert(owner_key_str.length() == 53, owner_key_str.c_str());
-
-    const string active_key_str = transfer.memo.substr(67, 53);
+    string active_key_str;
+    if(transfer.memo[66] == ':') {
+      // active key provided
+      active_key_str = transfer.memo.substr(67, 53);
+    } else {
+      // active key is the same as owner
+      active_key_str =  owner_key_str;
+    }
+    
 
     const abieos::public_key owner_pubkey =
         abieos::string_to_public_key(owner_key_str);
