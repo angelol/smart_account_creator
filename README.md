@@ -6,20 +6,20 @@ an account creation service. Since it's a smart contract, the account creation h
 
 ## How to use?
 Send at least 3 EOS to the contract which is deployed at the EOS account ```accountcreat```. In the memo, 
-you give the desired account name, the owner public key and the active public key separated by the ```:``` character. 
+you give the desired account name, the owner public key and the active public key separated by the ```-``` character. 
 
 For example, if your account name is ```mynewaccount```, your owner key is ```EOS6ra2QHsDr6yMyFaPaNwe3Hz8XmYRj3B68e5tbDchyPTTasgFH9``` 
 and your active key is ```EOS8WcL1CroNrXfdphkohCmea1Jgp7TpqQXrkpcF1gETweeSnphmJ```, the memo string would be:
 
 ```
-mynewaccount:EOS6ra2QHsDr6yMyFaPaNwe3Hz8XmYRj3B68e5tbDchyPTTasgFH9:EOS8WcL1CroNrXfdphkohCmea1Jgp7TpqQXrkpcF1gETweeSnphmJ
+mynewaccount-EOS6ra2QHsDr6yMyFaPaNwe3Hz8XmYRj3B68e5tbDchyPTTasgFH9-EOS8WcL1CroNrXfdphkohCmea1Jgp7TpqQXrkpcF1gETweeSnphmJ
 ```
 
-If you want to use the same key for owner and active. The second key including the ```:``` separator can be omitted. 
+Some exchanges like Binance don't allow to use a long memo. In this case or if you use the same key for owner and active, the second key including the ```-``` separator can be omitted. 
 So that would be a valid memo string as well:
 
 ```
-mynewaccount:EOS6ra2QHsDr6yMyFaPaNwe3Hz8XmYRj3B68e5tbDchyPTTasgFH9
+mynewaccount-EOS6ra2QHsDr6yMyFaPaNwe3Hz8XmYRj3B68e5tbDchyPTTasgFH9
 ```
 If you need help, visit the [EOS Account Creator Website](https://eos-account-creator.com/eos/). It will assist you in generating they keys and building the correct memo string.
 
