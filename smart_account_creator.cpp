@@ -32,11 +32,11 @@ public:
     const string account_string = transfer.memo.substr(0, 12);
     const account_name account_to_create =
         string_to_name(account_string.c_str());
-    eosio_assert(transfer.memo[12] == ':', "Malformed Memo [12] == :");
+    eosio_assert(transfer.memo[12] == ':' || transfer.memo[12] == '-', "Malformed Memo [12] == : or -");
 
     const string owner_key_str = transfer.memo.substr(13, 53);
     string active_key_str;
-    if(transfer.memo[66] == ':') {
+    if(transfer.memo[66] == ':' || transfer.memo[66] == '-') {
       // active key provided
       active_key_str = transfer.memo.substr(67, 53);
     } else {
