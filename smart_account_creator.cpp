@@ -64,15 +64,17 @@ public:
         1, {{{(uint8_t)abieos::key_type::k1, active_pubkey_char}, 1}}, {}, {}};
 
     const auto amount = buyrambytes(4 * 1024);
+    const auto ram_replace_amount = buyrambytes(250);
     const auto cpu = asset(1000);
     const auto net = asset(1000);
 
     const auto fee =
         asset(std::max((transfer.quantity.amount + 119) / 200, 1000ll));
-    eosio_assert(cpu + net + amount + fee <= transfer.quantity,
+        
+    eosio_assert(cpu + net + amount + fee + ram_replace_amount <= transfer.quantity,
                  "Not enough money");
 
-    const auto remaining_balance = transfer.quantity - cpu - net - amount - fee;
+    const auto remaining_balance = transfer.quantity - cpu - net - amount - fee - ram_replace_amount;
 
     // create account
     INLINE_ACTION_SENDER(call::eosio, newaccount)
@@ -82,6 +84,10 @@ public:
     // buy ram
     INLINE_ACTION_SENDER(call::eosio, buyram)
     (N(eosio), {{_self, N(active)}}, {_self, account_to_create, amount});
+    
+    // replace lost ram
+    INLINE_ACTION_SENDER(call::eosio, buyram)
+    (N(eosio), {{_self, N(active)}}, {_self, _self, replace_amount});
 
     // delegate and transfer cpu and net
     INLINE_ACTION_SENDER(call::eosio, delegatebw)
