@@ -65,8 +65,8 @@ public:
 
     const auto amount = buyrambytes(4 * 1024);
     const auto ram_replace_amount = buyrambytes(256);
-    const auto cpu = asset(1000);
-    const auto net = asset(1000);
+    const auto cpu = asset(1500);
+    const auto net = asset(500);
 
     const auto fee =
         asset(std::max((transfer.quantity.amount + 119) / 200, 1000ll));
