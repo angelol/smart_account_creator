@@ -8,7 +8,7 @@
 #include "includes/exchange_state.cpp"
 #include "includes/exchange_state.hpp"
 #include "includes/abieos_numeric.hpp"
-
+#include <eosiolib/crypto.h>
 
 namespace eosio {
 

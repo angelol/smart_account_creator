@@ -5,9 +5,14 @@ using namespace std;
 
 class sac : public contract {
 public:
-  sac(account_name self) : eosio::contract(self) {}
+  sac(account_name self) : eosio::contract(self), orders(_self, _self) {}
+  
+  const uint32_t EXPIRE_TIMEOUT = 60*60*3;
 
   void transfer(const account_name sender, const account_name receiver) {
+    array<char, 33> owner_pubkey_char;
+    array<char, 33> active_pubkey_char;
+    
     const auto transfer = unpack_action_data<currency::transfer>();
     if (transfer.from == _self || transfer.to != _self) {
       // this is an outgoing transfer, do nothing
@@ -19,44 +24,60 @@ public:
       return;
     }
     
-    /* Parse Memo
-     * Memo must have format "account_name:owner_key:active_key"
-     *
-     */
     eosio_assert(transfer.quantity.symbol == string_to_symbol(4, "EOS"),
                  "Must be EOS");
     eosio_assert(transfer.quantity.is_valid(), "Invalid token transfer");
     eosio_assert(transfer.quantity.amount > 0, "Quantity must be positive");
+    
+    // check if memo contains order
+    checksum256 result;
+    sha256((char *)transfer.memo.c_str(), transfer.memo.length(), &result);
 
-    eosio_assert(transfer.memo.length() == 120 || transfer.memo.length() == 66, "Malformed Memo (not right length)");
+    
+    auto idx = orders.template get_index<N(by_key)>();
+    auto itr = idx.find(order::to_key256(result));
+    
+    if(itr != idx.end()) {
+      auto order = idx.get(order::to_key256(result));
+      owner_pubkey_char = order.owner_key.data;
+      active_pubkey_char = order.active_key.data;
+    } else {
+      /* Parse Memo
+       * Memo must have format "account_name:owner_key:active_key"
+       *
+       */
+      eosio_assert(transfer.memo.length() == 120 || transfer.memo.length() == 66, "Malformed Memo (not right length)");
+      
+      eosio_assert(transfer.memo[12] == ':' || transfer.memo[12] == '-', "Malformed Memo [12] == : or -");
+
+      const string owner_key_str = transfer.memo.substr(13, 53);
+      string active_key_str;
+      if(transfer.memo[66] == ':' || transfer.memo[66] == '-') {
+        // active key provided
+        active_key_str = transfer.memo.substr(67, 53);
+      } else {
+        // active key is the same as owner
+        active_key_str =  owner_key_str;
+      }      
+      const abieos::public_key owner_pubkey =
+          abieos::string_to_public_key(owner_key_str);
+      const abieos::public_key active_pubkey =
+          abieos::string_to_public_key(active_key_str);
+
+      copy(owner_pubkey.data.begin(), owner_pubkey.data.end(),
+           owner_pubkey_char.begin());
+
+      
+      copy(active_pubkey.data.begin(), active_pubkey.data.end(),
+           active_pubkey_char.begin());
+    }
+    
+    
+    
     const string account_string = transfer.memo.substr(0, 12);
     const account_name account_to_create =
         string_to_name(account_string.c_str());
-    eosio_assert(transfer.memo[12] == ':' || transfer.memo[12] == '-', "Malformed Memo [12] == : or -");
-
-    const string owner_key_str = transfer.memo.substr(13, 53);
-    string active_key_str;
-    if(transfer.memo[66] == ':' || transfer.memo[66] == '-') {
-      // active key provided
-      active_key_str = transfer.memo.substr(67, 53);
-    } else {
-      // active key is the same as owner
-      active_key_str =  owner_key_str;
-    }
     
-
-    const abieos::public_key owner_pubkey =
-        abieos::string_to_public_key(owner_key_str);
-    const abieos::public_key active_pubkey =
-        abieos::string_to_public_key(active_key_str);
-
-    array<char, 33> owner_pubkey_char;
-    copy(owner_pubkey.data.begin(), owner_pubkey.data.end(),
-         owner_pubkey_char.begin());
-
-    array<char, 33> active_pubkey_char;
-    copy(active_pubkey.data.begin(), active_pubkey.data.end(),
-         active_pubkey_char.begin());
 
     const auto owner_auth = authority{
         1, {{{(uint8_t)abieos::key_type::k1, owner_pubkey_char}, 1}}, {}, {}};
@@ -105,10 +126,87 @@ public:
        {_self, account_to_create, remaining_balance,
         std::string("Initial balance")});
     }
-  }
+  };
+  
+  void regaccount(const account_name sender, const checksum256 hash, const string nonce, const eosio::public_key owner_key, const eosio::public_key active_key) {
+    require_auth(sender);
+    
+    orders.emplace(sender, [&](auto& order) {
+      order.id = orders.available_primary_key();
+      order.expires_at = now() + EXPIRE_TIMEOUT;
+      order.hash = hash;
+      order.nonce = nonce;
+      order.owner_key = owner_key;
+      order.active_key = active_key;
+    });
+    
+  };
+  
+  //@abi action
+  void clearexpired(const account_name sender) {
+    std::vector<order> l;
+
+    // check which objects need to be deleted
+    for( const auto& item : orders ) {
+      if(now() > item.expires_at) {
+        l.push_back(item);
+      }
+
+    }
+
+    // delete in second pass
+    for (order item : l) {
+      orders.erase(orders.find(item.primary_key()));
+    }
+  };
+  
+  //@abi action
+  void clearall(const account_name sender) {
+    require_auth(_self);
+    std::vector<order> l;
+
+    // check which objects need to be deleted
+    for( const auto& item : orders ) {
+      l.push_back(item);
+    }
+
+    // delete in second pass
+    for (order item : l) {
+      orders.erase(orders.find(item.primary_key()));
+    }
+  };
+  
+  private:
+    // @abi table order i64
+    struct order {
+      uint64_t id;
+      time expires_at;
+      checksum256 hash;
+      string nonce;
+      eosio::public_key owner_key;
+      eosio::public_key active_key;
+      
+      uint64_t primary_key()const { return id; }
+      
+      key256 by_key256()const { return to_key256(hash); }
+      uint64_t get_expires_at()const { return (uint64_t)expires_at; }
+      
+      static key256 to_key256(const checksum256& checksum) {
+            const uint64_t *p64 = reinterpret_cast<const uint64_t *>(&checksum);
+            return key256::make_from_word_sequence<uint64_t>(p64[0], p64[1], p64[2], p64[3]);
+      }
+      EOSLIB_SERIALIZE(order, (id)(expires_at)(hash)(nonce)(owner_key)(active_key))
+    };
+    typedef eosio::multi_index< N(order), order,
+         indexed_by< N(by_key), const_mem_fun<order, key256,  &order::by_key256> >,
+         indexed_by< N(expires_at), const_mem_fun<order, uint64_t,  &order::get_expires_at> >
+      > order_index;
+    order_index orders;
+    
 };
 
-// EOSIO_ABI(sac, (transfer))
+
+// EOSIO_ABI(sac, (transfer)(regaccount)(clearexpired)(clearall))
 
 #define EOSIO_ABI_EX(TYPE, MEMBERS)                                            \
   extern "C" {                                                                 \
@@ -128,4 +226,4 @@ public:
   }                                                                            \
   }
 
-EOSIO_ABI_EX(sac, (transfer))
+EOSIO_ABI_EX(sac, (transfer)(regaccount)(clearexpired)(clearall))
