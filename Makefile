@@ -49,10 +49,12 @@ test:
 	
 
 testbinance:
-	$(CLEOS) push action $(CONTRACT_ACCOUNT) regaccount '["angelo", "$(HASH)", "$(NONCE)", "$(PK)", "$(PK)"]' -p angelo
+	$(CLEOS) push action $(CONTRACT_ACCOUNT) regaccount '["angelo", "$(HASH)", "$(PK)", "$(PK)"]' -p angelo
 	$(CLEOS) transfer angelo $(CONTRACT_ACCOUNT) "1.0000 EOS" "$(ACCOUNT_NAME)$(NONCE)" -p angelo
 	$(CLEOS) get account $(ACCOUNT_NAME)
 
+clearexpired:
+	$(CLEOS) push action $(CONTRACT_ACCOUNT) clearexpired '["angelo"]' -p angelo
 	
 delete:
 	$(CLEOS) push action $(CONTRACT_ACCOUNT) clearall '["$(CONTRACT_ACCOUNT)"]' -p $(CONTRACT_ACCOUNT)

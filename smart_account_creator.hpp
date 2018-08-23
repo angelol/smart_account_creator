@@ -1,67 +1,46 @@
 #include <algorithm>
 #include <cmath>
+#include <boost/optional.hpp>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/currency.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/public_key.hpp>
-#include "includes/eosio.token.hpp"
-#include "includes/exchange_state.cpp"
-#include "includes/exchange_state.hpp"
-#include "includes/abieos_numeric.hpp"
+#include <eosio.system/exchange_state.hpp>
+#include <eosio.system/exchange_state.cpp>
+#include <eosio.token/eosio.token.hpp>
+#include <eosio.system/eosio.system.hpp>
+#include <eosio.system/native.hpp>
+#include <eosiolib/public_key.hpp>
 #include <eosiolib/crypto.h>
+#include "includes/abieos_numeric.hpp"
+
 
 namespace eosio {
 
-struct permission_level_weight {
-  permission_level permission;
-  weight_type weight;
-
-  // explicit serialization macro is not necessary, used here only to improve
-  // compilation time
-  EOSLIB_SERIALIZE(permission_level_weight, (permission)(weight))
-};
-
-struct key_weight {
-  eosio::public_key key;
-  weight_type weight;
-
-  // explicit serialization macro is not necessary, used here only to improve
-  // compilation time
-  EOSLIB_SERIALIZE(key_weight, (key)(weight))
-};
-
+// Temporary authority until native is fixed. Ref: https://github.com/EOSIO/eos/issues/4669
 struct wait_weight {
   uint32_t wait_sec;
   weight_type weight;
-
-  // explicit serialization macro is not necessary, used here only to improve
-  // compilation time
-  EOSLIB_SERIALIZE(wait_weight, (wait_sec)(weight))
 };
-
 struct authority {
   uint32_t threshold;
-  vector<key_weight> keys;
-  vector<permission_level_weight> accounts;
+  vector<eosiosystem::key_weight> keys;
+  vector<eosiosystem::permission_level_weight> accounts;
   vector<wait_weight> waits;
-
-  // explicit serialization macro is not necessary, used here only to improve
-  // compilation time
-  EOSLIB_SERIALIZE(authority, (threshold)(keys)(accounts)(waits))
 };
 
+
+// eosiosystem::native::newaccount Doesn't seem to want to take authorities.
 struct call {
   struct eosio {
-    void newaccount(account_name creator, account_name name, authority owner,
-                    authority active);
-    void delegatebw(account_name from, account_name receiver,
-                    asset stake_net_quantity, asset stake_cpu_quantity,
-                    bool transfer);
-    void buyram(account_name buyer, account_name receiver, asset tokens);
+    void newaccount(account_name creator, account_name name,
+                    authority owner, authority active);
   };
 };
+
+
 asset buyrambytes(uint32_t bytes) {
-  rammarket market(N(eosio), N(eosio));
+  eosiosystem::rammarket market(N(eosio), N(eosio));
   auto itr = market.find(S(4, RAMCORE));
   eosio_assert(itr != market.end(), "RAMCORE market not found");
   auto tmp = *itr;

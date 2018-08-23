@@ -24,8 +24,7 @@ public:
       return;
     }
     
-    eosio_assert(transfer.quantity.symbol == string_to_symbol(4, "EOS"),
-                 "Must be EOS");
+    eosio_assert(transfer.quantity.symbol == CORE_SYMBOL, "Must be CORE_SYMBOL");
     eosio_assert(transfer.quantity.is_valid(), "Invalid token transfer");
     eosio_assert(transfer.quantity.amount > 0, "Quantity must be positive");
     
@@ -36,11 +35,12 @@ public:
     
     auto idx = orders.template get_index<N(by_key)>();
     auto itr = idx.find(order::to_key256(result));
+    boost::optional<order> order;
     
     if(itr != idx.end()) {
-      auto order = idx.get(order::to_key256(result));
-      owner_pubkey_char = order.owner_key.data;
-      active_pubkey_char = order.active_key.data;
+      order = idx.get(order::to_key256(result));
+      owner_pubkey_char = order->owner_key.data;
+      active_pubkey_char = order->active_key.data;
     } else {
       /* Parse Memo
        * Memo must have format "account_name:owner_key:active_key"
@@ -103,15 +103,15 @@ public:
      {_self, account_to_create, owner_auth, active_auth});
 
     // buy ram
-    INLINE_ACTION_SENDER(call::eosio, buyram)
+    INLINE_ACTION_SENDER(eosiosystem::system_contract, buyram)
     (N(eosio), {{_self, N(active)}}, {_self, account_to_create, amount});
     
     // replace lost ram
-    INLINE_ACTION_SENDER(call::eosio, buyram)
+    INLINE_ACTION_SENDER(eosiosystem::system_contract, buyram)
     (N(eosio), {{_self, N(active)}}, {_self, _self, ram_replace_amount});
 
     // delegate and transfer cpu and net
-    INLINE_ACTION_SENDER(call::eosio, delegatebw)
+    INLINE_ACTION_SENDER(eosiosystem::system_contract, delegatebw)
     (N(eosio), {{_self, N(active)}}, {_self, account_to_create, net, cpu, 1});
     // fee
     INLINE_ACTION_SENDER(eosio::token, transfer)
@@ -126,16 +126,24 @@ public:
        {_self, account_to_create, remaining_balance,
         std::string("Initial balance")});
     }
+    
+    if(order) {
+      // account has successfully been created, so we can release the RAM taken by this order
+      orders.erase(orders.find(order->primary_key()));
+    }
   };
   
-  void regaccount(const account_name sender, const checksum256 hash, const string nonce, const eosio::public_key owner_key, const eosio::public_key active_key) {
+  void regaccount(const account_name sender, const checksum256 hash, const eosio::public_key owner_key, const eosio::public_key active_key) {
     require_auth(sender);
+    
+    auto idx = orders.template get_index<N(by_key)>();
+    auto itr = idx.find(order::to_key256(hash));
+    eosio_assert(itr == idx.end(), "Order already exists");
     
     orders.emplace(sender, [&](auto& order) {
       order.id = orders.available_primary_key();
       order.expires_at = now() + EXPIRE_TIMEOUT;
       order.hash = hash;
-      order.nonce = nonce;
       order.owner_key = owner_key;
       order.active_key = active_key;
     });
@@ -144,12 +152,17 @@ public:
   
   //@abi action
   void clearexpired(const account_name sender) {
+    // if user orders and account, but never creates it, we need a way to reclaim that RAM
+    // can be called by anyone by design
     std::vector<order> l;
-
-    // check which objects need to be deleted
-    for( const auto& item : orders ) {
-      if(now() > item.expires_at) {
+    auto idx = orders.template get_index<N(expires_at)>();
+    
+    // idx is now sorted by expires_at, oldest first
+    for( const auto& item : idx ) {
+      if(item.expires_at < now()) {
         l.push_back(item);
+      } else {
+        break;
       }
 
     }
@@ -160,12 +173,13 @@ public:
     }
   };
   
+  /*
   //@abi action
   void clearall(const account_name sender) {
+    // used mostly during development
     require_auth(_self);
     std::vector<order> l;
 
-    // check which objects need to be deleted
     for( const auto& item : orders ) {
       l.push_back(item);
     }
@@ -175,6 +189,7 @@ public:
       orders.erase(orders.find(item.primary_key()));
     }
   };
+  */
   
   private:
     // @abi table order i64
@@ -182,7 +197,6 @@ public:
       uint64_t id;
       time expires_at;
       checksum256 hash;
-      string nonce;
       eosio::public_key owner_key;
       eosio::public_key active_key;
       
@@ -195,7 +209,7 @@ public:
             const uint64_t *p64 = reinterpret_cast<const uint64_t *>(&checksum);
             return key256::make_from_word_sequence<uint64_t>(p64[0], p64[1], p64[2], p64[3]);
       }
-      EOSLIB_SERIALIZE(order, (id)(expires_at)(hash)(nonce)(owner_key)(active_key))
+      EOSLIB_SERIALIZE(order, (id)(expires_at)(hash)(owner_key)(active_key))
     };
     typedef eosio::multi_index< N(order), order,
          indexed_by< N(by_key), const_mem_fun<order, key256,  &order::by_key256> >,
@@ -206,7 +220,7 @@ public:
 };
 
 
-// EOSIO_ABI(sac, (transfer)(regaccount)(clearexpired)(clearall))
+// EOSIO_ABI(sac, (transfer)(regaccount)(clearexpired))
 
 #define EOSIO_ABI_EX(TYPE, MEMBERS)                                            \
   extern "C" {                                                                 \
@@ -226,4 +240,4 @@ public:
   }                                                                            \
   }
 
-EOSIO_ABI_EX(sac, (transfer)(regaccount)(clearexpired)(clearall))
+EOSIO_ABI_EX(sac, (transfer)(regaccount)(clearexpired))

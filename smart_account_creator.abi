@@ -19,9 +19,6 @@
           "name": "hash",
           "type": "checksum256"
         },{
-          "name": "nonce",
-          "type": "string"
-        },{
           "name": "owner_key",
           "type": "public_key"
         },{
@@ -50,9 +47,6 @@
           "name": "hash",
           "type": "checksum256"
         },{
-          "name": "nonce",
-          "type": "string"
-        },{
           "name": "owner_key",
           "type": "public_key"
         },{
@@ -62,14 +56,6 @@
       ]
     },{
       "name": "clearexpired",
-      "base": "",
-      "fields": [{
-          "name": "sender",
-          "type": "name"
-        }
-      ]
-    },{
-      "name": "clearall",
       "base": "",
       "fields": [{
           "name": "sender",
@@ -89,10 +75,6 @@
     },{
       "name": "clearexpired",
       "type": "clearexpired",
-      "ricardian_contract": ""
-    },{
-      "name": "clearall",
-      "type": "clearall",
       "ricardian_contract": ""
     }
   ],
