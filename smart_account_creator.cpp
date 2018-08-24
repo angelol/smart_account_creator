@@ -138,7 +138,10 @@ public:
     
     auto idx = orders.template get_index<N(by_key)>();
     auto itr = idx.find(order::to_key256(hash));
-    eosio_assert(itr == idx.end(), "Order already exists");
+    if(itr != idx.end()) {
+      // fail gracefully if it already exists
+      return;
+    }
     
     orders.emplace(sender, [&](auto& order) {
       order.id = orders.available_primary_key();
