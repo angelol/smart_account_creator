@@ -41,7 +41,7 @@ echo -n '$(ACCOUNT_NAME)$(NONCE)'| shasum -a256 | awk '{print $1}'
 Now we're ready to register our account creation order with the smart contract like this:
 
 ```
-cleos push action $(CONTRACT_ACCOUNT) regaccount '["$(SENDER)", "$(HASH)", "$(NONCE)", "$(OWNER_PK)", "$(ACTIVE_PK)"]' 
+cleos push action $(CONTRACT_ACCOUNT) regaccount '["$(SENDER)", "$(HASH)", "$(OWNER_PK)", "$(ACTIVE_PK)"]' 
 ```
 The SENDER account will pay for the RAM required to store this order in the smart contract table. After successful account creation, this RAM will be released. If the account is not created, the RAM can be released after 3 hours by sending the action "clearexpired" to the contract.
 
