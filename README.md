@@ -5,6 +5,9 @@ on an exchange and don't have their own EOS account yet. It removes the need for
 an account creation service. Since it's a smart contract, the account creation happens instantly, automatically and trustless.
 
 ## How to use?
+There are two ways this smart contract can be used. Method 1 is the easiest since the memo can be constructed without the help of software. The disadvantage of Method 1 is that due to the length of the resulting memo, it does not work with some exchanges such as Binance or Huobi. Method 2 requires code to register the order with the smart contract as well as to generate the memo, but it's the only method that works with those exchanges.
+
+### Method 1 (does *not* work with Binance or Huobi)
 Send at least 3 EOS to the contract which is deployed at the EOS account ```accountcreat```. In the memo, 
 you give the desired account name, the owner public key and the active public key separated by the ```-``` character. 
 
@@ -22,6 +25,30 @@ So that would be a valid memo string as well:
 mynewaccount-EOS6ra2QHsDr6yMyFaPaNwe3Hz8XmYRj3B68e5tbDchyPTTasgFH9
 ```
 If you need help, visit the [EOS Account Creator Website](https://eos-account-creator.com/eos/). It will assist you in generating they keys and building the correct memo string.
+
+### Method 2 (*does* work with Binance and Huobi)
+This method uses a commit-reveal scheme to register the owner and active public keys with the smart contract.
+#### Registering your Public Keys with the smart contract
+Let ACCOUNT_NAME be your 12 character EOS account name that you want to register. Generate a nonce like this:
+```
+openssl rand 8 -hex
+```
+
+Generate a sha256 hash like this, by appending the nonce you just created to your account name:
+```
+echo -n '$(ACCOUNT_NAME)$(NONCE)'| shasum -a256 | awk '{print $1}'
+```
+Now we're ready to register our account creation order with the smart contract like this:
+
+```
+cleos push action $(CONTRACT_ACCOUNT) regaccount '["$(SENDER)", "$(HASH)", "$(NONCE)", "$(OWNER_PK)", "$(ACTIVE_PK)"]' 
+```
+The SENDER account will pay for the RAM required to store this order in the smart contract table. After successful account creation, this RAM will be released. If the account is not created, the RAM can be released after 3 hours by sending the action "clearexpired" to the contract.
+
+We can now finally register the account by making an EOS token transfer to the CONTRACT_ACCOUNT like this:
+```
+cleos transfer $(SENDER) $(CONTRACT_ACCOUNT) "1.0000 EOS" '$(ACCOUNT_NAME)$(NONCE)'
+```
 
 ## How does it work?
 When you withdraw your EOS to the accountcreat smart contract, it will perform the following steps in order:
