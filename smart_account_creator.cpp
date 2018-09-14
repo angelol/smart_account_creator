@@ -9,11 +9,10 @@ public:
   
   const uint32_t EXPIRE_TIMEOUT = 60*60*3;
 
-  void transfer(const account_name sender, const account_name receiver) {
+  void transfer(const currency::transfer &transfer) {
     array<char, 33> owner_pubkey_char;
     array<char, 33> active_pubkey_char;
     
-    const auto transfer = unpack_action_data<currency::transfer>();
     if (transfer.from == _self || transfer.to != _self) {
       // this is an outgoing transfer, do nothing
       return;
@@ -24,7 +23,6 @@ public:
       return;
     }
     
-    eosio_assert(code == N(eosio.token), "I reject your non-eosio.token transfer");
     eosio_assert(transfer.quantity.symbol == CORE_SYMBOL, "Must be CORE_SYMBOL");
     eosio_assert(transfer.quantity.is_valid(), "Invalid token transfer");
     eosio_assert(transfer.quantity.amount > 0, "Quantity must be positive");
@@ -134,28 +132,28 @@ public:
     }
   };
   
-  void regaccount(const account_name sender, const checksum256 hash, const eosio::public_key owner_key, const eosio::public_key active_key) {
-    require_auth(sender);
+  void regaccount(const regaccount_args &args) {
+    require_auth(args.sender);
     
     auto idx = orders.template get_index<N(by_key)>();
-    auto itr = idx.find(order::to_key256(hash));
+    auto itr = idx.find(order::to_key256(args.hash));
     if(itr != idx.end()) {
       // fail gracefully if it already exists
       return;
     }
     
-    orders.emplace(sender, [&](auto& order) {
+    orders.emplace(args.sender, [&](auto& order) {
       order.id = orders.available_primary_key();
       order.expires_at = now() + EXPIRE_TIMEOUT;
-      order.hash = hash;
-      order.owner_key = owner_key;
-      order.active_key = active_key;
+      order.hash = args.hash;
+      order.owner_key = args.owner_key;
+      order.active_key = args.active_key;
     });
     
   };
   
   //@abi action
-  void clearexpired(const account_name sender) {
+  void clearexpired(const clearexpired_args &args) {
     // if user orders and account, but never creates it, we need a way to reclaim that RAM
     // can be called by anyone by design
     std::vector<order> l;
@@ -226,22 +224,28 @@ public:
 
 // EOSIO_ABI(sac, (transfer)(regaccount)(clearexpired))
 
-#define EOSIO_ABI_EX(TYPE, MEMBERS)                                            \
-  extern "C" {                                                                 \
-  void apply(uint64_t receiver, uint64_t code, uint64_t action) {              \
-    if (action == N(onerror)) {                                                \
-      /* onerror is only valid if it is for the "eosio" code account and       \
-       * authorized by "eosio"'s "active permission */                         \
-      eosio_assert(code == N(eosio), "onerror action's are only valid from "   \
-                                     "the \"eosio\" system account");          \
-    }                                                                          \
-    auto self = receiver;                                                      \
-    if (code == self || code == N(eosio.token) || action == N(onerror)) {      \
-      TYPE thiscontract(self);                                                 \
-      switch (action) { EOSIO_API(TYPE, MEMBERS) }                             \
-      /* does not allow destructor of thiscontract to run: eosio_exit(0); */   \
-    }                                                                          \
-  }                                                                            \
-  }
+extern "C"
+{
+    [[noreturn]] void apply(uint64_t receiver, uint64_t code, uint64_t action) {
+        sac _sac(receiver);
 
-EOSIO_ABI_EX(sac, (transfer)(regaccount)(clearexpired))
+        switch (action)
+        {
+        case N(transfer):
+            if (code == N(eosio.token))
+            {
+                _sac.transfer(unpack_action_data<currency::transfer>());
+            }
+            break;
+        case N(regaccount):
+            _sac.regaccount(unpack_action_data<regaccount_args>());
+            break;
+        case N(clearexpired):
+            _sac.clearexpired(unpack_action_data<clearexpired_args>());
+            break;
+        default:
+            break;
+        }
+        eosio_exit(0);
+    }
+}

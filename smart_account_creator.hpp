@@ -12,7 +12,7 @@
 #include <eosio.system/native.hpp>
 #include <eosiolib/public_key.hpp>
 #include <eosiolib/crypto.h>
-#include "includes/abieos_numeric.hpp"
+#include "abieos_numeric.hpp"
 
 
 namespace eosio {
@@ -47,3 +47,16 @@ asset buyrambytes(uint32_t bytes) {
   return tmp.convert(asset(bytes, S(0, RAM)), CORE_SYMBOL);
 }
 }
+
+
+struct regaccount_args {
+  account_name sender; 
+  checksum256 hash;
+  eosio::public_key owner_key;
+  eosio::public_key active_key;
+};
+
+struct clearexpired_args {
+  account_name sender;
+};
+
