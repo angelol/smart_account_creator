@@ -24,6 +24,7 @@ public:
       return;
     }
     
+    eosio_assert(code == N(eosio.token), "I reject your non-eosio.token transfer");
     eosio_assert(transfer.quantity.symbol == CORE_SYMBOL, "Must be CORE_SYMBOL");
     eosio_assert(transfer.quantity.is_valid(), "Invalid token transfer");
     eosio_assert(transfer.quantity.amount > 0, "Quantity must be positive");
