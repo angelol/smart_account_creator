@@ -221,10 +221,11 @@ CONTRACT sac : public contract {
       };
       const auto stake_cpu = data.stake_cpu;
       const auto stake_net = default_net_stake;
+      const auto rent_cpu_amount = asset{10, core_symbol};
       const auto ram_price = determine_ram_price(data.ram_amount_bytes);
       const auto ram_replace_amount = determine_ram_price(256);
       const auto fee = asset{std::max((quantity.amount + 119) / 200, 1000ll), core_symbol};      
-      const auto remaining_balance = quantity - stake_cpu - stake_net - ram_price - fee - ram_replace_amount;
+      const auto remaining_balance = quantity - stake_cpu - stake_net - ram_price - fee - ram_replace_amount - rent_cpu_amount;
       check(remaining_balance.amount >= 0, "Not enough money");
       
       action(
@@ -260,7 +261,21 @@ CONTRACT sac : public contract {
         "eosio"_n,
         "delegatebw"_n,
         make_tuple(_self, data.name, stake_net, stake_cpu, true)
-      ).send();    
+      ).send();
+      
+      action(
+        permission_level{ _self, "active"_n},
+        "eosio"_n,
+        "deposit"_n,
+        make_tuple(_self, rent_cpu_amount)
+      ).send();
+      
+      action(
+        permission_level{ _self, "active"_n},
+        "eosio"_n,
+        "rentcpu"_n,
+        make_tuple(_self, data.name, rent_cpu_amount, asset{0, core_symbol})
+      ).send();
       
       if(remaining_balance.amount > 0) {
         action(
