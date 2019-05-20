@@ -15,6 +15,7 @@ deploy: build
 	$(CLEOS) set contract $(CONTRACT_ACCOUNT) . $(CPP_IN).wasm $(CPP_IN).abi
 	
 system:
+	$(CLEOS) create account eosio eosio.rex $(PK) $(PK)
 	$(CLEOS) create account eosio eosio.token $(PK) $(PK)
 	$(CLEOS) create account eosio eosio.msig $(PK) $(PK)
 	$(CLEOS) create account eosio eosio.bpay $(PK) $(PK)
@@ -37,6 +38,8 @@ setup:
 	$(CLEOS) system newaccount --stake-net "1.0000 EOS" --stake-cpu "1.0000 EOS" --buy-ram-kbytes 8000 eosio saccountfees $(PK) $(PK)
 	$(CLEOS) system newaccount --stake-net "1.0000 EOS" --stake-cpu "1.0000 EOS" --buy-ram-kbytes 8000 eosio angelo $(PK) $(PK)
 	$(CLEOS) transfer eosio angelo "1000.0000 EOS"
+	$(CLEOS) transfer eosio accountcreat "1000.0000 EOS"
+
 
 test:
 	$(CLEOS) transfer angelo $(CONTRACT_ACCOUNT) "10.0000 EOS" "$(ACCOUNT_NAME):EOS7R6HoUvevAtoLqUMSix74x9Wk4ig75tA538HaGXLFKpquKCPkH:EOS6bWFTECWtssKrHQVrkKKf68EydHNyr1ujv23KCZMFUxqwcGqC3" -p $(CONTRACT_ACCOUNT)@active -p angelo@active
