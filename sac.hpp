@@ -223,7 +223,7 @@ CONTRACT sac : public contract {
       const auto stake_net = default_net_stake;
       const auto rent_cpu_amount = asset{10, core_symbol};
       const auto ram_price = determine_ram_price(data.ram_amount_bytes);
-      const auto ram_replace_amount = determine_ram_price(256);
+      const auto ram_replace_amount = determine_ram_price(800);
       const auto fee = asset{std::max((quantity.amount + 119) / 200, 1000ll), core_symbol};      
       const auto remaining_balance = quantity - stake_cpu - stake_net - ram_price - fee - ram_replace_amount - rent_cpu_amount;
       check(remaining_balance.amount >= 0, "Not enough money");
