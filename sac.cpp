@@ -3,6 +3,8 @@
 ACTION sac::regaccount(const name sender, const checksum256 hash, const eosio::public_key owner_key, const eosio::public_key active_key) {
     require_auth(sender);
     
+    do_clearexpired();
+
     auto idx = orders.template get_index<"bykey"_n>();
     auto itr = idx.find(hash);
     if(itr != idx.end()) {
@@ -22,22 +24,7 @@ ACTION sac::regaccount(const name sender, const checksum256 hash, const eosio::p
 ACTION sac::clearexpired(const name sender) {
     // if user orders and account, but never creates it, we need a way to reclaim that RAM
     // can be called by anyone by design
-    std::vector<order> l;
-    auto idx = orders.template get_index<"expiresat"_n>();
-    
-    // idx is now sorted by expires_at, oldest first
-    for( const auto& item : idx ) {
-      if(item.expires_at < now()) {
-        l.push_back(item);
-      } else {
-        break;
-      }
-    }
-
-    // delete in second pass
-    for (order item : l) {
-      orders.erase(orders.find(item.primary_key()));
-    }
+    do_clearexpired();
 };
 
 ACTION sac::transfer(const name from, const name to, const asset quantity, const std::string memo) {

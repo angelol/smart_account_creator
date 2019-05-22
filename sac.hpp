@@ -84,6 +84,25 @@ CONTRACT sac : public contract {
     ACTION transfer(const name from, const name to, const asset quantity, const std::string memo);
 
   private:
+    void do_clearexpired() {
+      std::vector<order> l;
+      auto idx = orders.template get_index<"expiresat"_n>();
+      
+      // idx is now sorted by expires_at, oldest first
+      for( const auto& item : idx ) {
+        if(item.expires_at < now()) {
+          l.push_back(item);
+        } else {
+          break;
+        }
+      }
+
+      // delete in second pass
+      for (order item : l) {
+        orders.erase(orders.find(item.primary_key()));
+      }
+    }
+    
     asset determine_ram_price(uint32_t bytes) {
       rammarket rammarkettable(system_account, system_account.value);
       auto market = rammarkettable.get(RAMCORE_symbol.raw());
