@@ -7,8 +7,9 @@
 #include <stdint.h>
 #include <string>
 #include <string_view>
-#include <eosiolib/crypto.hpp>
+#include <eosio/crypto.hpp>
 
+using namespace eosio;
 namespace abieos {
 
 const char base58_chars[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";

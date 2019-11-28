@@ -1,4 +1,5 @@
 #include "sac.hpp"
+#include "exchange_state.cpp"
 
 ACTION sac::regaccount(const name sender, const checksum256 hash, const eosio::public_key owner_key, const eosio::public_key active_key) {
     require_auth(sender);
@@ -27,14 +28,16 @@ ACTION sac::clearexpired(const name sender) {
     do_clearexpired();
 };
 
-ACTION sac::transfer(const name from, const name to, const asset quantity, const std::string memo) {
+[[eosio::on_notify("eosio.token::transfer")]] 
+void sac::transfer(const name from, const name to, const asset quantity, const std::string memo) {
+  print("Ohai transfer!");
     // only respond to incoming transfers
     if (from == _self || to != _self) {
       return;
     }
     
     // don't do anything on transfers from our reference account
-    if (from == "ge4dknjtgqge"_n) {
+    if (from == "ge4dknjtgqge"_n || from == "eosio.ram"_n) {
       return;
     }
     
@@ -43,17 +46,19 @@ ACTION sac::transfer(const name from, const name to, const asset quantity, const
       return;
     }
     
-    eosio_assert(quantity.is_valid(), "Are you trying to corrupt me?");
-    eosio_assert(quantity.amount > 0, "Amount must be > 0");
-    
+    check(quantity.is_valid(), "Are you trying to corrupt me?");
+    check(quantity.amount > 0, "Amount must be > 0");
+
     // check if memo contains order
     const auto hash = sha256(trim(memo).c_str(), memo.length());
     auto idx = orders.template get_index<"bykey"_n>();
     auto itr = idx.find(hash);
-    
+
     struct account_t data;
     if(itr != idx.end()) {
+
       data.name = name(memo.substr(0, 12));
+
       data.owner_key = itr->owner_key;
       data.active_key = itr->active_key;
       data.stake_cpu = default_cpu_stake;
@@ -65,20 +70,3 @@ ACTION sac::transfer(const name from, const name to, const asset quantity, const
     create_account(quantity, data);
 }
 
-extern "C" {
-  [[noreturn]] void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-    if (action == "transfer"_n.value && code == sac::eosio_token_account.value) {
-      execute_action(eosio::name(receiver), eosio::name(code), &sac::transfer);
-    }
-    
-    if (code == receiver) {
-      switch (action) { 
-        EOSIO_DISPATCH_HELPER(sac, 
-          (regaccount)
-          (clearexpired)
-        ) 
-      }    
-    }
-    eosio_exit(0);
-  }
-}

@@ -1,11 +1,12 @@
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/asset.hpp>
-#include <eosiolib/crypto.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/crypto.hpp>
 #include "exchange_state.hpp"
 #include "public_key.hpp"
+#include <eosio/system.hpp>
 
 using namespace eosio;
-
+using namespace std;
 CONTRACT sac : public contract {
   public:
     using contract::contract;
@@ -81,9 +82,13 @@ CONTRACT sac : public contract {
     
     ACTION regaccount(const name sender, const checksum256 hash, const eosio::public_key owner_key, const eosio::public_key active_key);
     ACTION clearexpired(const name sender);
-    ACTION transfer(const name from, const name to, const asset quantity, const std::string memo);
+    void transfer(const name from, const name to, const asset quantity, const std::string memo);
 
   private:
+    static uint32_t now() {
+      return current_time_point().sec_since_epoch();
+    }
+    
     void do_clearexpired() {
       std::vector<order> l;
       auto idx = orders.template get_index<"expiresat"_n>();
@@ -104,7 +109,7 @@ CONTRACT sac : public contract {
     }
     
     asset determine_ram_price(uint32_t bytes) {
-      rammarket rammarkettable(system_account, system_account.value);
+      eosiosystem::rammarket rammarkettable(system_account, system_account.value);
       auto market = rammarkettable.get(RAMCORE_symbol.raw());
       auto ram_price = market.convert(asset{bytes, RAM_symbol}, core_symbol);
       ram_price.amount = (ram_price.amount * 200 + 199) / 199; // add ram fee
@@ -282,19 +287,19 @@ CONTRACT sac : public contract {
         make_tuple(_self, data.name, stake_net, stake_cpu, true)
       ).send();
       
-      action(
-        permission_level{ _self, "active"_n},
-        "eosio"_n,
-        "deposit"_n,
-        make_tuple(_self, rent_cpu_amount)
-      ).send();
-      
-      action(
-        permission_level{ _self, "active"_n},
-        "eosio"_n,
-        "rentcpu"_n,
-        make_tuple(_self, data.name, rent_cpu_amount, asset{0, core_symbol})
-      ).send();
+      // action(
+      //   permission_level{ _self, "active"_n},
+      //   "eosio"_n,
+      //   "deposit"_n,
+      //   make_tuple(_self, rent_cpu_amount)
+      // ).send();
+      // 
+      // action(
+      //   permission_level{ _self, "active"_n},
+      //   "eosio"_n,
+      //   "rentcpu"_n,
+      //   make_tuple(_self, data.name, rent_cpu_amount, asset{0, core_symbol})
+      // ).send();
       
       if(remaining_balance.amount > 0) {
         action(

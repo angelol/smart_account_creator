@@ -1,9 +1,13 @@
 CPP_IN=sac
 CONTRACT_ACCOUNT=accountcreat
+# CONTRACT_ACCOUNT=fwwenbnhyljq
 PK=EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 EOS_CONTRACTS_DIR=/Users/al/Projects/eos/eosio.contracts/build/contracts
 ACCOUNT_NAME := $(shell python gen.py)
 CLEOS=cleos 
+# CLEOS=cleos -u https://eos.greymass.com
+# CLEOS=cleos -u https://bos-api.eosauthority.com
+
 # CLEOS=cleos -u https://eos.greymass.com
 NONCE := $(shell openssl rand 8 -hex)
 HASH := $(shell /bin/echo -n '$(ACCOUNT_NAME)$(NONCE)'| shasum -a256 | awk '{print $$1}')
