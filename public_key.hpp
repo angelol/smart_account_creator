@@ -1,12 +1,6 @@
 // copyright defined in abieos/LICENSE.txt
 // Adapted from https://github.com/EOSIO/abieos/blob/master/src/abieos_numeric.hpp
 
-#include <algorithm>
-#include <array>
-#include <stdexcept>
-#include <stdint.h>
-#include <string>
-#include <string_view>
 #include <eosio/crypto.hpp>
 
 using namespace eosio;
@@ -51,30 +45,31 @@ enum class key_type : uint8_t {
     r1 = 1,
 };
 
-
-template <typename Key, int suffix_size>
-Key string_to_key(std::string_view s, key_type type, const char (&suffix)[suffix_size]) {
-    static const auto size = std::tuple_size<decltype(Key::data)>::value;
+ecc_public_key string_to_ecc(std::string_view s, key_type type) {
+    static const auto size = std::tuple_size<ecc_public_key>::value;
     auto whole = base58_to_binary<size + 4>(s);
-    Key result{static_cast<uint8_t>(type)};
-    memcpy(result.data.data(), whole.data(), result.data.size());
-    return result;
+    ecc_public_key ecc_key;
+    check(whole.size() == ecc_key.size() + 4, "Error: whole.size() != ecc_key.size() + 4");
+    memcpy(ecc_key.data(), whole.data(), ecc_key.size());
+    return ecc_key;
 }
-
 
 eosio::public_key string_to_public_key(std::string_view s) {
     if (s.size() >= 3 && s.substr(0, 3) == "EOS") {
-        auto whole = base58_to_binary<37>(s.substr(3));
-        eosio::public_key key{static_cast<uint8_t>(key_type::k1)};
-        check(whole.size() == key.data.size() + 4, "Error: whole.size() != key.data.size() + 4");
-        memcpy(key.data.data(), whole.data(), key.data.size());
-        return key;
+        ecc_public_key ecc_key = string_to_ecc(s.substr(3), key_type::k1);
+        return public_key{ std::in_place_index<0>, ecc_key };
+
+    } else if (s.size() >= 7 && s.substr(0, 7) == "PUB_K1_") {
+        ecc_public_key ecc_key = string_to_ecc(s.substr(7), key_type::k1);
+        return public_key{ std::in_place_index<0>, ecc_key };
+
     } else if (s.size() >= 7 && s.substr(0, 7) == "PUB_R1_") {
-        return string_to_key<eosio::public_key>(s.substr(7), key_type::r1, "R1");
+        ecc_public_key ecc_key = string_to_ecc(s.substr(7), key_type::r1);
+        return public_key{ std::in_place_index<1>, ecc_key };
+        
     } else {
         check(0, "unrecognized public key format");
         return eosio::public_key{}; // this is never returned, but shuts up compiler warnings
     }
 }
-
-} // namespace abieos
+} //namepace abieos
